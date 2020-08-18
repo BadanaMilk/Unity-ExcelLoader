@@ -1,0 +1,23 @@
+// ========================================================
+// ExcelLoader의 ScriptGenerator를 통해 생성된 스크립트 파일입니다.
+// 해당 데이터의 커스텀을 원한다면 partial 스크립트를 만들어서 해야합니다.
+// Script file created by ScriptGenerator in ExcelLoader.
+// If you want to customize that data, create a partial script.
+// ========================================================
+namespace ExcelLoader
+{
+	[System.Serializable]
+	public partial class $TableData$ : iTableDataBase
+	{
+		public string GetTableName() { return "$TableName$"; }
+
+		public object GetKey() { return $TableKey$ ; }
+
+		$MembersField$
+
+		public $TableData$($DataParam$)
+		{ 
+			$MembersInit$
+		}
+	}
+}
