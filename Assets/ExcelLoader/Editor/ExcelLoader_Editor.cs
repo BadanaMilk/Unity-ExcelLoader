@@ -270,10 +270,11 @@ namespace ExcelLoader
                         {
                             EditorUtility.DisplayProgressBar("Work...", string.Format("CS파일 생성중({0})...", _itemList[listMultiSelects[_index] - 1].displayName), (float)(_index + 1) / listMultiSelects.Count);
 
-                            LoadExcel(_itemList[listMultiSelects[_index] - 1].displayName);
-                            string[] _splits = _itemList[listMultiSelects[_index] - 1].displayName.Split('\\');
-                            _splits = _splits[_splits.Length - 1].Split('.');
-                            string _sheetName = _splits[0];
+                            string _sheetName;
+                            string _excelFilePath;
+                            GetExcelFilePathAndSheetName(_itemList[listMultiSelects[_index] - 1], out _excelFilePath, out _sheetName);
+
+                            LoadExcel(_excelFilePath);
                             ISheet _tableSheet;
                             List<HeaderData> _headers = LoadSheet(selectWorkbook, _itemList[listMultiSelects[_index] - 1].displayName, _sheetName, out _tableSheet);
                             string _log = string.Format("File Name = {0}, Sheet Name = {1}", _itemList[listMultiSelects[_index] - 1].displayName, _sheetName);
@@ -295,12 +296,15 @@ namespace ExcelLoader
                         for (int _index = 0; _index < listMultiSelects.Count; _index++)
                         {
                             EditorUtility.DisplayProgressBar("Work...", string.Format("바이너리 작성중({0})...", _itemList[listMultiSelects[_index] - 1].displayName), (float)(_index + 1) / listMultiSelects.Count);
-                            LoadExcel(_itemList[listMultiSelects[_index] - 1].displayName);
-                            string[] _splits = _itemList[listMultiSelects[_index] - 1].displayName.Split('\\');
-                            _splits = _splits[_splits.Length - 1].Split('.');
-                            string _sheetName = _splits[0];
+
+                            string _sheetName;
+                            string _excelFilePath;
+                            GetExcelFilePathAndSheetName(_itemList[listMultiSelects[_index] - 1], out _excelFilePath, out _sheetName);
+
+                            LoadExcel(_excelFilePath);                            
                             ISheet _tableSheet;
                             List<HeaderData> _headers = LoadSheet(selectWorkbook, _itemList[listMultiSelects[_index] - 1].displayName,_sheetName, out _tableSheet);
+
                             string _log = string.Format("File Name = {0}, Sheet Name = {1}", _itemList[listMultiSelects[_index] - 1].displayName, _sheetName);
                             if (_tableSheet == null)
                             {
@@ -475,6 +479,15 @@ namespace ExcelLoader
                 listSelectSheetHeaders = _listHeader;
 
             scriptGenerator.SetScriptGenerator(selectSheet.SheetName, settingData, listSelectSheetHeaders);
+        }
+
+        void GetExcelFilePathAndSheetName(TreeViewItem _item, out string _excelFilePath, out string _sheetName)
+        {
+            ExcelLoaderTreeView.ExcelLoaderTreeViewItem _treeViewItem = _item as ExcelLoaderTreeView.ExcelLoaderTreeViewItem;
+            _excelFilePath = _treeViewItem.itemName;
+            string[] _splits = _excelFilePath.Split('\\');
+            _splits = _splits[_splits.Length - 1].Split('.');
+            _sheetName = _splits[0];
         }
 
         /// <summary>
