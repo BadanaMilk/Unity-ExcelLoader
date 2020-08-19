@@ -15,6 +15,10 @@ namespace ExcelLoader
 
 		$MembersField$
 
+		public $TableData$()
+		{ 
+		}
+
 		public $TableData$($DataParam$)
 		{ 
 			$MembersInit$
