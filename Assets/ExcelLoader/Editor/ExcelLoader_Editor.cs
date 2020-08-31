@@ -141,6 +141,10 @@ namespace ExcelLoader
                 settingData = ScriptableObject.CreateInstance<ExcelLoader_Setting>();
                 AssetDatabase.CreateAsset(settingData, string.Format("{0}/ExcelLoaderSetting.asset", _settingPath));
             }
+            settingData.SetDefaultPath();
+            EditorUtility.SetDirty(settingData);
+            AssetDatabase.SaveAssets();
+
             //GUI를 위해 트리뷰를 생성
             singleListViewState = new TreeViewState();
             singleListView = new ExcelFileTreeView(singleListViewState, settingData, ref listSearchedFiles, OnClickSingleSelectExcelList);
@@ -158,6 +162,7 @@ namespace ExcelLoader
         {
             string _filePath = new System.Diagnostics.StackTrace(true).GetFrame(0).GetFileName();
             excelLoaderPath = _filePath.Remove(0, _filePath.IndexOf("Assets")).Replace("\\", "/").Replace("ExcelLoader_Editor.cs", "");
+
             scriptGenerator = new ScriptGenerator();
 
             multiListViewState = new TreeViewState();
@@ -204,7 +209,7 @@ namespace ExcelLoader
             if (GUILayout.Button("엑셀 파일 검색", GUILayout.Width(100)))
             {
                 listSearchedFiles.Clear();
-                string[] _arrData = Directory.GetFiles(settingData.excelPath);
+                string[] _arrData = Directory.GetFiles(settingData.GetExcelFullPath());
                 for (int _index = 0; _index < _arrData.Length; _index++)
                 {
                     string _extention = GetExtensionString(_arrData[_index]);
@@ -303,7 +308,7 @@ namespace ExcelLoader
                                 string _sheetName;
                                 string _excelFilePath;
                                 GetExcelFilePathAndSheetName(_item, out _excelFilePath, out _sheetName);
-                                if (File.Exists(string.Format("{0}/{1}.cs", settingData.classPath, ScriptGenerator.GetDataName(_sheetName))) == false)
+                                if (File.Exists(string.Format("{0}/{1}.cs", settingData.GetClassFullPath(), ScriptGenerator.GetDataName(_sheetName))) == false)
                                 {
                                     _guiEnable = false;
                                     break;
@@ -343,8 +348,8 @@ namespace ExcelLoader
                                     Debug.LogErrorFormat("ExcelLoader Error : 엑셀 파일에 해당하는 CS파일이 존재하지 않습니다. {0}", _log);
                                     continue;
                                 }
-                                WriteBinary(_headers, _tableSheet, _tableType, _dataType, settingData.dataPath, _sheetName);
-                                WriteCSV(_headers, _tableSheet, _dataType, settingData.dataPath, _sheetName);
+                                WriteBinary(_headers, _tableSheet, _tableType, _dataType, settingData.GetDataFullPath(), _sheetName);
+                                WriteCSV(_headers, _tableSheet, _dataType, settingData.GetDataFullPath(), _sheetName);
                             }
                             EditorUtility.ClearProgressBar();
                             AssetDatabase.Refresh();
@@ -404,11 +409,11 @@ namespace ExcelLoader
                             scriptGenerator.DataScriptGenerate();
                             AssetDatabase.Refresh();
                         }
-                        GUI.enabled = !isCompiling && (selectSheet == null ? false : File.Exists(string.Format("{0}/{1}.cs", settingData.classPath, scriptGenerator.dataFileName)));
+                        GUI.enabled = !isCompiling && (selectSheet == null ? false : File.Exists(string.Format("{0}/{1}.cs", settingData.GetClassFullPath(), scriptGenerator.dataFileName)));
                         if (GUILayout.Button("바이너리,CSV 생성/갱신", GUILayout.Width(position.width / 2 - 5)))
                         {
-                            WriteBinary(listSelectSheetHeaders, selectSheet, scriptGenerator.GetTableType(), scriptGenerator.GetDataType(), settingData.dataPath, scriptGenerator.dataTableName);
-                            WriteCSV(listSelectSheetHeaders, selectSheet, scriptGenerator.GetDataType(), settingData.dataPath, scriptGenerator.dataTableName);
+                            WriteBinary(listSelectSheetHeaders, selectSheet, scriptGenerator.GetTableType(), scriptGenerator.GetDataType(), settingData.GetDataFullPath(), scriptGenerator.dataTableName);
+                            WriteCSV(listSelectSheetHeaders, selectSheet, scriptGenerator.GetDataType(), settingData.GetDataFullPath(), scriptGenerator.dataTableName);
                             AssetDatabase.Refresh();
                             RefreshGUI();
                         }
@@ -439,19 +444,14 @@ namespace ExcelLoader
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(string.Format("{0}\t:", _pathName), GUILayout.Width(150));
             GUI.enabled = false;
-            EditorGUILayout.TextField(_path);
+            EditorGUILayout.TextField(settingData.defaultPath + _path);
             GUI.enabled = !isCompiling;
             if (GUILayout.Button("..", GUILayout.Width(30)))
             {
-                string _selectPath = EditorUtility.OpenFolderPanel("Select Folder", _path, "");
+                string _selectPath = EditorUtility.OpenFolderPanel("Select Folder", settingData.defaultPath + _path, "");
                 if (string.IsNullOrEmpty(_selectPath) == false)
                 {
-                    //int _index = _selectPath.IndexOf("Assets");
-                    //if (_index != -1)
-                    //{
-                    //    _path = _selectPath.Remove(0, _selectPath.IndexOf("Assets"));
-                    //}
-                    _path = _selectPath;
+                    _path = _selectPath.Replace(settingData.defaultPath, "");
                     EditorUtility.SetDirty(settingData);
                     AssetDatabase.SaveAssets();
                 }

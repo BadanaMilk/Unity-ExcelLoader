@@ -29,7 +29,7 @@ namespace ExcelLoader
 
         public void SetScriptGenerator(string _sheetName, ExcelLoader_Setting _setting, List<HeaderData> _listHeader)
         {
-            dataFileName = _sheetName + "Data";
+            dataFileName = GetDataName(_sheetName);
             dataTableName = _sheetName;
             setting = _setting;
             listHeader = _listHeader;
@@ -57,7 +57,7 @@ namespace ExcelLoader
             _csText = _csText.Replace("$DataParam$", string.Join(",\n\t\t\t", _strDataParams));
             _csText = _csText.Replace("$MembersInit$", string.Join("\n\t\t\t", _strMemberInits));
 
-            string _fullPath = string.Format("{0}/{1}.cs", setting.classPath, dataFileName);
+            string _fullPath = string.Format("{0}/{1}.cs", setting.GetClassFullPath(), dataFileName);
             string _folderPath = Path.GetDirectoryName(_fullPath);
             if (!Directory.Exists(_folderPath))
             {

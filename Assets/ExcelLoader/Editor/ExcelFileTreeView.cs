@@ -136,9 +136,9 @@ namespace ExcelLoader
 
         protected override void SetIcon(ExcelLoaderTreeViewItem _item)
         {
-            if (File.Exists(settingInfo.classPath + string.Format("/{0}Data.cs", _item.itemName)))
+            if (File.Exists(settingInfo.GetClassFullPath()+ string.Format("/{0}Data.cs", _item.itemName)))
             {
-                if (File.Exists(settingInfo.dataPath + string.Format("/{0}.bytes", _item.itemName)))
+                if (File.Exists(settingInfo.GetDataFullPath() + string.Format("/{0}.bytes", _item.itemName)))
                     _item.icon = icon_on;
                 else
                     _item.icon = icon_off;
