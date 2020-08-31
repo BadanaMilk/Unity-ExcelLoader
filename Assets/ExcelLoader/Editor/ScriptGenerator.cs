@@ -98,5 +98,10 @@ namespace ExcelLoader
             }
             return null;
         }
+
+        public static string GetDataName(string _sheetName)
+        {
+            return _sheetName + "Data";
+        }
     }
 }

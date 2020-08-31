@@ -12,6 +12,7 @@ namespace ExcelLoader
     public class ExcelLoaderTreeView : TreeView
     {
         protected ExcelLoader_Setting settingInfo;
+
         protected List<string> arrayData;
         protected Action<int, string> onClickEvent;
 
@@ -31,6 +32,11 @@ namespace ExcelLoader
             depthIndentWidth = 0;
         }
 
+        public TreeViewItem GetItem(int _id)
+        {
+            return rootItem.children.Find(_item => _item.id == _id);
+        }
+
         protected override TreeViewItem BuildRoot()
         {
             TreeViewItem _rootItem = new TreeViewItem { id = 0, depth = -1, displayName = "Root" };
@@ -42,7 +48,6 @@ namespace ExcelLoader
                 SetIcon(_item);
                 _listItem.Add(_item);
             }
-
             SetupParentsAndChildrenFromDepths(_rootItem, _listItem);
             return _rootItem;
         }

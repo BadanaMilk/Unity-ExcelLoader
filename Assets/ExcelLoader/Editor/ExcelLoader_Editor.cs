@@ -4,16 +4,15 @@ using System.Collections.Generic;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Collections;
 using UnityEngine;
 using UnityEditor;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using UnityEditor.IMGUI.Controls;
-using System.Reflection;
-using System.Collections;
-using System.Text.RegularExpressions;
-using UnityEngine.WSA;
+using System.Text;
 
 namespace ExcelLoader
 {
@@ -43,8 +42,8 @@ namespace ExcelLoader
 
         bool isCompiling = false;
 
-        float treeViewStartPosY = 130f;
-        float treeViewEndPosY = 250f;
+        float treeViewStartPosY = 145f;
+        float treeViewEndPosY = 265f;
         float treeViewPadding = 5f;
         float excelListViewWidth = 250f;
 
@@ -125,7 +124,7 @@ namespace ExcelLoader
         /// <summary>
         /// 엑셀 로더의 초기화 함수
         /// </summary>
-        public void Init()
+        private void Init()
         {
             scriptGenerator = new ScriptGenerator();
             //엑셀 로더 세팅 정보를 저장할 폴더 경로
@@ -146,7 +145,7 @@ namespace ExcelLoader
             singleListViewState = new TreeViewState();
             singleListView = new ExcelFileTreeView(singleListViewState, settingData, ref listSearchedFiles, OnClickSingleSelectExcelList);
             multiListViewState = new TreeViewState();
-            multiListView = new ExcelFileTreeView(multiListViewState, settingData, ref listSearchedFiles, OnClickMultiSelectExcelList);
+            multiListView = new ExcelFileTreeView(multiListViewState, settingData, ref listSearchedFiles, null);
             sheetListViewState = new TreeViewState();
             sheetListView = new ExcelSheetTreeView(sheetListViewState, settingData, ref listExcelSheets, OnClickSheetList);
             searchField = new SearchField();
@@ -162,7 +161,7 @@ namespace ExcelLoader
             scriptGenerator = new ScriptGenerator();
 
             multiListViewState = new TreeViewState();
-            multiListView = new ExcelFileTreeView(multiListViewState, settingData, ref listSearchedFiles, OnClickMultiSelectExcelList);
+            multiListView = new ExcelFileTreeView(multiListViewState, settingData, ref listSearchedFiles, null);
             multiListViewState.selectedIDs = listMultiSelects;
             
             singleListViewState = new TreeViewState();
@@ -200,6 +199,7 @@ namespace ExcelLoader
             DrawSelectFolder("엑셀 테이블 경로", ref settingData.excelPath);
             DrawSelectFolder("테이블 클래스 경로", ref settingData.classPath);
             DrawSelectFolder("데이터 저장 경로", ref settingData.dataPath);
+            DrawSelectFolder("CSV 저장 경로", ref settingData.csvPath);
 
             if (GUILayout.Button("엑셀 파일 검색", GUILayout.Width(100)))
             {
@@ -221,8 +221,6 @@ namespace ExcelLoader
             //현재 로드 타입이 이전에 타입과 다르면 선택된 내용을 지워준다.
             if (_prevLoadType != currentLoadType)
             {
-                listMultiSelects.Clear();
-
                 selectWorkbook = null;
                 selectSheet = null;
                 listSelectSheetHeaders.Clear();
@@ -233,6 +231,7 @@ namespace ExcelLoader
                 listExcelSheets.Clear();
                 sheetListView.Reload();
 
+                multiListView.SetSelection(new List<int>());
                 multiListView.searchString = string.Empty;
                 if (currentLoadType == eExcelLoaderType.MultiSelect)
                 {
@@ -249,149 +248,180 @@ namespace ExcelLoader
             switch (currentLoadType)
             {
                 case eExcelLoaderType.MultiSelect:
-                    multiListView.searchString = searchField.OnGUI(new Rect(treeViewPadding, treeViewStartPosY - 20, excelListViewWidth, 20), multiListView.searchString);
-                    multiListView.OnGUI(multiSelectListViewRect);
+                    {
+                        multiListView.searchString = searchField.OnGUI(new Rect(treeViewPadding, treeViewStartPosY - 20, excelListViewWidth, 20), multiListView.searchString);
+                        multiListView.OnGUI(multiSelectListViewRect);
 
-                    GUILayout.Space(treeViewEndPosY + 30);
-                    Color _deaultColor = GUI.color;
-                    GUI.color = Color.green;
-                    if (GUILayout.Button("전체 선택", GUILayout.Width(100)))
-                    {
-                        multiListView.SelectAllRows();
-                    }
-                    GUI.color = _deaultColor;
-                    GUILayout.BeginHorizontal();
-                    GUI.enabled = !isCompiling && listMultiSelects.Count > 0;
-                    if (GUILayout.Button("CS 파일 생성/갱신", GUILayout.Width(position.width / 2 - 5)))
-                    {
-                        EditorUtility.DisplayProgressBar("Work...", "CS파일 생성중...", 0);
-                        IList<TreeViewItem> _itemList = multiListView.GetRows();
-                        for (int _index = 0; _index < listMultiSelects.Count; _index++)
+                        GUILayout.Space(treeViewEndPosY + 30);
+                        Color _deaultColor = GUI.color;
+                        GUI.color = Color.green;
+                        if (GUILayout.Button("전체 선택", GUILayout.Width(100)))
                         {
-                            EditorUtility.DisplayProgressBar("Work...", string.Format("CS파일 생성중({0})...", _itemList[listMultiSelects[_index] - 1].displayName), (float)(_index + 1) / listMultiSelects.Count);
-
-                            string _sheetName;
-                            string _excelFilePath;
-                            GetExcelFilePathAndSheetName(_itemList[listMultiSelects[_index] - 1], out _excelFilePath, out _sheetName);
-
-                            LoadExcel(_excelFilePath);
-                            ISheet _tableSheet;
-                            List<HeaderData> _headers = LoadSheet(selectWorkbook, _itemList[listMultiSelects[_index] - 1].displayName, _sheetName, out _tableSheet);
-                            string _log = string.Format("File Name = {0}, Sheet Name = {1}", _itemList[listMultiSelects[_index] - 1].displayName, _sheetName);
-                            if (_tableSheet == null)
-                            {
-                                Debug.LogErrorFormat("ExcelLoader Error : 엑셀 파일에 해당 시트가 존재하지 않습니다. {0}", _log);
-                                continue;
-                            }
-                            scriptGenerator.SetScriptGenerator(_sheetName, settingData, _headers);
-                            scriptGenerator.DataScriptGenerate();
+                            multiListView.SelectAllRows();
                         }
-                        EditorUtility.ClearProgressBar();
-                        AssetDatabase.Refresh();
-                    }
-                    if (GUILayout.Button("바이너리 생성/갱신", GUILayout.Width(position.width / 2 - 5)))
-                    {
-                        IList<TreeViewItem> _itemList = multiListView.GetRows();
-                        EditorUtility.DisplayProgressBar("Work...", "바이너리 작성중...", 0);
-                        for (int _index = 0; _index < listMultiSelects.Count; _index++)
+                        GUI.color = _deaultColor;
+                        GUILayout.BeginHorizontal();
+                        GUI.enabled = !isCompiling && multiListViewState.selectedIDs.Count > 0;
+                        if (GUILayout.Button("CS 파일 생성/갱신", GUILayout.Width(position.width / 2 - 5)))
                         {
-                            EditorUtility.DisplayProgressBar("Work...", string.Format("바이너리 작성중({0})...", _itemList[listMultiSelects[_index] - 1].displayName), (float)(_index + 1) / listMultiSelects.Count);
-
-                            string _sheetName;
-                            string _excelFilePath;
-                            GetExcelFilePathAndSheetName(_itemList[listMultiSelects[_index] - 1], out _excelFilePath, out _sheetName);
-
-                            LoadExcel(_excelFilePath);                            
-                            ISheet _tableSheet;
-                            List<HeaderData> _headers = LoadSheet(selectWorkbook, _itemList[listMultiSelects[_index] - 1].displayName,_sheetName, out _tableSheet);
-
-                            string _log = string.Format("File Name = {0}, Sheet Name = {1}", _itemList[listMultiSelects[_index] - 1].displayName, _sheetName);
-                            if (_tableSheet == null)
+                            EditorUtility.DisplayProgressBar("Work...", "CS파일 생성중...", 0);
+                            IList<int> _selects = multiListView.GetSelection();
+                            listMultiSelects = (List<int>)_selects;
+                            for (int _index = 0; _index < _selects.Count; _index++)
                             {
-                                Debug.LogErrorFormat("ExcelLoader Error : 엑셀 파일에 해당 시트가 존재하지 않습니다. {0}", _log);
-                                continue;
+                                TreeViewItem _item = multiListView.GetItem(_selects[_index]);
+                                EditorUtility.DisplayProgressBar("Work...", string.Format("CS파일 생성중({0})...", _item.displayName), (float)(_index + 1) / _selects.Count);
+
+                                string _sheetName;
+                                string _excelFilePath;
+                                GetExcelFilePathAndSheetName(_item, out _excelFilePath, out _sheetName);
+
+                                LoadExcel(_excelFilePath);
+                                ISheet _tableSheet;
+                                List<HeaderData> _headers = LoadSheet(selectWorkbook, _item.displayName, _sheetName, out _tableSheet);
+                                string _log = string.Format("File Name = {0}, Sheet Name = {1}", _item.displayName, _sheetName);
+                                if (_tableSheet == null)
+                                {
+                                    Debug.LogErrorFormat("ExcelLoader Error : 엑셀 파일에 해당 시트가 존재하지 않습니다. {0}", _log);
+                                    continue;
+                                }
+                                scriptGenerator.SetScriptGenerator(_sheetName, settingData, _headers);
+                                scriptGenerator.DataScriptGenerate();
                             }
-                            Type _tableType = ScriptGenerator.GetType("ExcelLoader.DataContainer");
-                            Type _dataType = ScriptGenerator.GetType(string.Format("ExcelLoader.{0}Data", _sheetName));
-                            if (_dataType == null)
-                            {
-                                Debug.LogErrorFormat("ExcelLoader Error : 엑셀 파일에 해당하는 CS파일이 존재하지 않습니다. {0}", _log);
-                                continue;
-                            }
-                            WriteBinary(_headers, _tableSheet, _tableType, _dataType, settingData.dataPath, _sheetName);
+                            EditorUtility.ClearProgressBar();
+                            AssetDatabase.Refresh();
                         }
-                        EditorUtility.ClearProgressBar();
-                        AssetDatabase.Refresh();
-                        RefreshGUI();
+
+                        //현재 선택한 엑셀파일들중에 CS파일이 생성되지 않은 엑셀이 있는 경우 GUI를 disable한다.
+                        bool _guiEnable = !isCompiling && multiListViewState.selectedIDs.Count > 0;
+                        if (_guiEnable == true)
+                        {
+                            IList<int> _selects = multiListView.GetSelection();
+                            for (int _index = 0; _index < _selects.Count; _index++)
+                            {
+                                TreeViewItem _item = multiListView.GetItem(_selects[_index]);
+                                string _sheetName;
+                                string _excelFilePath;
+                                GetExcelFilePathAndSheetName(_item, out _excelFilePath, out _sheetName);
+                                if (File.Exists(string.Format("{0}/{1}.cs", settingData.classPath, ScriptGenerator.GetDataName(_sheetName))) == false)
+                                {
+                                    _guiEnable = false;
+                                    break;
+                                }
+                            }
+                        }
+                        GUI.enabled = _guiEnable;
+
+                        if (GUILayout.Button("바이너리,CSV 생성/갱신", GUILayout.Width(position.width / 2 - 5)))
+                        {
+                            IList<int> _selects = multiListView.GetSelection();
+                            listMultiSelects = (List<int>)_selects;
+                            EditorUtility.DisplayProgressBar("Work...", "바이너리 작성중...", 0);
+                            for (int _index = 0; _index < _selects.Count; _index++)
+                            {
+                                TreeViewItem _item = multiListView.GetItem(_selects[_index]);
+                                EditorUtility.DisplayProgressBar("Work...", string.Format("바이너리 작성중({0})...", _item.displayName), (float)(_index + 1) / _selects.Count);
+
+                                string _sheetName;
+                                string _excelFilePath;
+                                GetExcelFilePathAndSheetName(_item, out _excelFilePath, out _sheetName);
+
+                                LoadExcel(_excelFilePath);
+                                ISheet _tableSheet;
+                                List<HeaderData> _headers = LoadSheet(selectWorkbook, _item.displayName, _sheetName, out _tableSheet);
+
+                                string _log = string.Format("File Name = {0}, Sheet Name = {1}", _item.displayName, _sheetName);
+                                if (_tableSheet == null)
+                                {
+                                    Debug.LogErrorFormat("ExcelLoader Error : 엑셀 파일에 해당 시트가 존재하지 않습니다. {0}", _log);
+                                    continue;
+                                }
+                                Type _tableType = ScriptGenerator.GetType("ExcelLoader.DataContainer");
+                                Type _dataType = ScriptGenerator.GetType(string.Format("ExcelLoader.{0}Data", _sheetName));
+                                if (_dataType == null)
+                                {
+                                    Debug.LogErrorFormat("ExcelLoader Error : 엑셀 파일에 해당하는 CS파일이 존재하지 않습니다. {0}", _log);
+                                    continue;
+                                }
+                                WriteBinary(_headers, _tableSheet, _tableType, _dataType, settingData.dataPath, _sheetName);
+                                WriteCSV(_headers, _tableSheet, _dataType, settingData.dataPath, _sheetName);
+                            }
+                            EditorUtility.ClearProgressBar();
+                            AssetDatabase.Refresh();
+                            RefreshGUI();
+                        }
+                        GUI.enabled = !isCompiling;
+                        GUILayout.EndHorizontal();
                     }
-                    GUI.enabled = !isCompiling;
-                    GUILayout.EndHorizontal();
                     break;
                 case eExcelLoaderType.SingleSelect:
-                    singleListView.searchString = searchField.OnGUI(new Rect(treeViewPadding, treeViewStartPosY - 20, excelListViewWidth, 20), singleListView.searchString);
-                    singleListView.OnGUI(singleSelectListViewRect);
-                    sheetListView.OnGUI(sheetListViewRect);
-
-                    GUILayout.Space(treeViewEndPosY + 20 + 20);
-
-                    using (new GUILayout.HorizontalScope(EditorStyles.toolbar))
                     {
-                        GUILayout.Label("Member", GUILayout.MinWidth(100));
-                        GUILayout.FlexibleSpace();
-                        string[] names = { "Type", "Array" };
-                        int[] widths = { 55, 40 };
-                        for (int i = 0; i < names.Length; i++)
-                        {
-                            GUILayout.Label(new GUIContent(names[i]), GUILayout.Width(widths[i]));
-                        }
-                    }
+                        singleListView.searchString = searchField.OnGUI(new Rect(treeViewPadding, treeViewStartPosY - 20, excelListViewWidth, 20), singleListView.searchString);
+                        singleListView.OnGUI(singleSelectListViewRect);
+                        sheetListView.OnGUI(sheetListViewRect);
 
-                    using (new EditorGUILayout.VerticalScope("box"))
-                    {
-                        GUILayout.BeginVertical();
-                        if (listSelectSheetHeaders != null)
+                        GUILayout.Space(treeViewEndPosY + 20 + 20);
+
+                        using (new GUILayout.HorizontalScope(EditorStyles.toolbar))
                         {
-                            foreach (HeaderData header in listSelectSheetHeaders)
+                            GUILayout.Label("Member", GUILayout.MinWidth(100));
+                            GUILayout.FlexibleSpace();
+                            string[] names = { "Type", "Array" };
+                            int[] widths = { 55, 40 };
+                            for (int i = 0; i < names.Length; i++)
                             {
-                                GUILayout.BeginHorizontal();
-
-                                EditorGUILayout.LabelField(header.name, GUILayout.MinWidth(100));
-                                GUILayout.FlexibleSpace();
-
-                                EditorGUILayout.EnumPopup(header.type, GUILayout.Width(60));
-                                GUILayout.Space(20);
-
-                                EditorGUILayout.Toggle(header.arrayGroup > 0, GUILayout.Width(20));
-                                GUILayout.Space(10);
-                                GUILayout.EndHorizontal();
+                                GUILayout.Label(new GUIContent(names[i]), GUILayout.Width(widths[i]));
                             }
                         }
-                        EditorGUILayout.EndVertical();
-                    }
 
-                    GUILayout.BeginHorizontal();
-                    GUI.enabled = !isCompiling && listSelectSheetHeaders.Count > 0;
-                    if (GUILayout.Button("CS 파일 생성/갱신", GUILayout.Width(position.width / 2 - 5)))
-                    {
-                        scriptGenerator.DataScriptGenerate();
-                        AssetDatabase.Refresh();
-                    }
-                    GUI.enabled = !isCompiling && (selectSheet == null ? false : File.Exists(string.Format("{0}/{1}.cs", settingData.classPath, scriptGenerator.dataFileName)));
-                    if (GUILayout.Button("바이너리 생성/갱신", GUILayout.Width(position.width / 2 - 5)))
-                    {
-                        WriteBinary(listSelectSheetHeaders, selectSheet, scriptGenerator.GetTableType(), scriptGenerator.GetDataType(), settingData.dataPath, scriptGenerator.dataTableName);
-                        AssetDatabase.Refresh();
-                        RefreshGUI();
-                    }
-                    GUI.enabled = !isCompiling;
-                    GUILayout.EndHorizontal();
+                        using (new EditorGUILayout.VerticalScope("box"))
+                        {
+                            GUILayout.BeginVertical();
+                            if (listSelectSheetHeaders != null)
+                            {
+                                foreach (HeaderData header in listSelectSheetHeaders)
+                                {
+                                    GUILayout.BeginHorizontal();
 
-                    //if (GUILayout.Button("테이블 로드 테스트"))
-                    //{
-                    //    string _path = settingData.dataPath + '/' + scriptGenerator.dataTableName + ".bytes";
-                    //    _path = _path.Remove(0, _path.IndexOf("Assets"));
-                    //    DataContainer _table = DataContainer.LoadTable(AssetDatabase.LoadAssetAtPath<TextAsset>(_path));                        
-                    //}
+                                    EditorGUILayout.LabelField(header.name, GUILayout.MinWidth(100));
+                                    GUILayout.FlexibleSpace();
+
+                                    EditorGUILayout.EnumPopup(header.type, GUILayout.Width(60));
+                                    GUILayout.Space(20);
+
+                                    EditorGUILayout.Toggle(header.arrayGroup > 0, GUILayout.Width(20));
+                                    GUILayout.Space(10);
+                                    GUILayout.EndHorizontal();
+                                }
+                            }
+                            EditorGUILayout.EndVertical();
+                        }
+
+                        GUILayout.BeginHorizontal();
+                        GUI.enabled = !isCompiling && listSelectSheetHeaders.Count > 0;
+                        if (GUILayout.Button("CS 파일 생성/갱신", GUILayout.Width(position.width / 2 - 5)))
+                        {
+                            scriptGenerator.DataScriptGenerate();
+                            AssetDatabase.Refresh();
+                        }
+                        GUI.enabled = !isCompiling && (selectSheet == null ? false : File.Exists(string.Format("{0}/{1}.cs", settingData.classPath, scriptGenerator.dataFileName)));
+                        if (GUILayout.Button("바이너리,CSV 생성/갱신", GUILayout.Width(position.width / 2 - 5)))
+                        {
+                            WriteBinary(listSelectSheetHeaders, selectSheet, scriptGenerator.GetTableType(), scriptGenerator.GetDataType(), settingData.dataPath, scriptGenerator.dataTableName);
+                            WriteCSV(listSelectSheetHeaders, selectSheet, scriptGenerator.GetDataType(), settingData.dataPath, scriptGenerator.dataTableName);
+                            AssetDatabase.Refresh();
+                            RefreshGUI();
+                        }
+                        GUI.enabled = !isCompiling;
+                        GUILayout.EndHorizontal();
+
+                        //if (GUILayout.Button("테이블 로드 테스트"))
+                        //{
+                        //    string _path = settingData.dataPath + '/' + scriptGenerator.dataTableName + ".bytes";
+                        //    _path = _path.Remove(0, _path.IndexOf("Assets"));
+                        //    DataContainer _table = DataContainer.LoadTable(AssetDatabase.LoadAssetAtPath<TextAsset>(_path));
+                        //}
+                    }
                     break;
                 default:
                     break;
@@ -452,14 +482,6 @@ namespace ExcelLoader
                 listExcelSheets.Add(selectWorkbook.GetSheetName(_index));
             }
             sheetListView.Reload();
-        }
-
-        /// <summary>
-        /// 다중 선택 엑셀 트리뷰 클릭 이벤트
-        /// </summary>
-        void OnClickMultiSelectExcelList(int _selectID, string _excelPath)
-        {
-            listMultiSelects = multiListViewState.selectedIDs;
         }
 
         /// <summary>
@@ -712,9 +734,9 @@ namespace ExcelLoader
         /// </summary>
         /// <param name="_tableType">테이블 타입</param>
         /// <param name="_dataType">데이터 타입</param>
-        /// <param name="_path">저장 경로</param>
+        /// <param name="_savepath">저장 경로</param>
         /// <param name="_filename">파일 이름</param>
-        void WriteBinary(List<HeaderData> _headerData, ISheet _sheet, Type _tableType, Type _dataType, string _path, string _filename)
+        void WriteBinary(List<HeaderData> _headerData, ISheet _sheet, Type _tableType, Type _dataType, string _savepath, string _filename)
         {
             Type _listType = typeof(List<>).MakeGenericType(_dataType);
             var _listInstance = Activator.CreateInstance(_listType);
@@ -764,10 +786,62 @@ namespace ExcelLoader
 
             var _var = Activator.CreateInstance(_tableType, _list, _dataType);
             DataContainer _table = (DataContainer)_var;
-            StreamWriter sWriter = new StreamWriter(_path + string.Format("/{0}.bytes", _filename));            
+            StreamWriter sWriter = new StreamWriter(_savepath + string.Format("/{0}.bytes", _filename));            
             BinaryFormatter bin = new BinaryFormatter();
             bin.Serialize(sWriter.BaseStream, _table);
             sWriter.Close();
+        }
+
+        void WriteCSV(List<HeaderData> _headerData, ISheet _sheet, Type _dataType, string _savepath, string _filename)
+        {
+            PropertyInfo[] _dataPropertyInfo = _dataType.GetProperties();
+
+            using (var wtr = new StreamWriter(_savepath + string.Format("/{0}.csv", _filename)))
+            {
+                foreach (IRow _row in _sheet)
+                {
+                    if (_row.RowNum < 1)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        ICell _keyCell = _row.GetCell(0);
+                        if (_keyCell == null || _keyCell.CellType == NPOI.SS.UserModel.CellType.Blank)
+                            continue;
+
+                        string[] _stringCells = new string[_headerData.Count];
+                        for (int _index = 0; _index < _headerData.Count; _index++)
+                        {
+                            ICell _cell = _row.GetCell(_headerData[_index].cellColumnIndex);
+
+                            if (_cell == null)
+                                continue;
+
+                            object _data;
+                            if (_headerData[_index].arrayGroup > 0)
+                            {
+                                List<int> _listArrayColurm = _headerData[_index].GetArrayColurms();
+                                Type _elementType = _dataPropertyInfo[_index].PropertyType.GetElementType();
+                                string[] _arrayDatas = new string[_listArrayColurm.Count];
+                                for (int _index_2 = 0; _index_2 < _listArrayColurm.Count; _index_2++)
+                                {
+                                    ICell _arrayDataCell = _row.GetCell(_listArrayColurm[_index_2]);
+                                    _arrayDatas[_index_2] = ConvertFrom(_arrayDataCell, _elementType).ToString();
+                                }
+                                _data = string.Join(",", _arrayDatas);
+                            }
+                            else
+                            {
+                                _data = ConvertFrom(_cell, _dataPropertyInfo[_index].PropertyType);
+                            }
+
+                            _stringCells[_index] = _data.ToString();
+                        }
+                        wtr.WriteLine(string.Join(",", _stringCells));
+                    }
+                }
+            }
         }
 
         /// <summary>

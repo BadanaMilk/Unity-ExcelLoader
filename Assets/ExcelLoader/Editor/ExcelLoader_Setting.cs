@@ -11,4 +11,6 @@ public class ExcelLoader_Setting : ScriptableObject
     public string classPath;
     [SerializeField]
     public string dataPath;
+    [SerializeField]
+    public string csvPath;
 }
