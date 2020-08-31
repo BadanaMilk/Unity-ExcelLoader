@@ -52,7 +52,7 @@ namespace ExcelLoader
             if (dictionaryDatas.ContainsKey(_key))
                 return (TData)dictionaryDatas[_key];
             else
-                return default;
+                return default(TData);
         }
 
         /// <summary>
@@ -72,7 +72,7 @@ namespace ExcelLoader
             }
             else
             {
-                _data = default;
+                _data = default(TData);
                 return false;
             }
         }
@@ -90,13 +90,34 @@ namespace ExcelLoader
                        where _predicate((TData)entry.Value)
                        select entry.Key;
 
-            _result = default;
+            _result = default(TData);
             if (keys.Count() > 0)
             {
                 _result = (TData)dictionaryDatas[keys.First()];
                 return true;
             }
             return false;
+        }
+
+        /// <summary>
+        /// 테이블을 검색해서 원하는 값을 모두 얻는 함수.
+        /// </summary>
+        /// <typeparam name="TData">테이블 데이터 타입</typeparam>
+        /// <param name="_predicate">검색 비교 조건</param>
+        /// <param name="_results">테이블 데이터 배열</param>
+        /// <returns></returns>
+        public bool TryGetSearchValueAll<TData>(Predicate<TData> _predicate, out TData[] _results) where TData : iTableDataBase, new()
+        {
+            var keys = from entry in dictionaryDatas
+                       where _predicate((TData)entry.Value)
+                       select entry.Key;
+
+            _results = new TData[keys.Count()];
+            for (int _index = 0; _index < keys.Count(); _index++)
+            {
+                _results[_index] = (TData)dictionaryDatas[keys.ElementAt(_index)];
+            }
+            return keys.Count() > 0;
         }
 
         /// <summary>
