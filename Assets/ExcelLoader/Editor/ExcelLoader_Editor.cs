@@ -632,7 +632,7 @@ namespace ExcelLoader
                         }
                     }
 
-                    HeaderData _headData = new HeaderData() { type = _eType, name = _headerData[0], cellColumnIndex = _cell.ColumnIndex };
+                    HeaderData _headData = new HeaderData() { type = _eType, name = _headerData[0].Replace(" ", ""), cellColumnIndex = _cell.ColumnIndex };
 
                     //배열 그룹이 있다면
                     if (_arrayGroupID > 0)
