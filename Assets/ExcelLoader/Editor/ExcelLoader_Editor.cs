@@ -303,8 +303,15 @@ namespace ExcelLoader
                                     UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 엑셀 파일에 해당 시트가 존재하지 않습니다. {0}", _log);
                                     continue;
                                 }
-                                scriptGenerator.SetScriptGenerator(_sheetName, _namespace, settingData, _headers);
-                                scriptGenerator.DataScriptGenerate();
+                                if (_headers.Count < 1)
+                                {
+                                    UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 엑셀 파일에 필드가 존재하지 않습니다. {0}", _log);
+                                }
+                                else
+                                {
+                                    scriptGenerator.SetScriptGenerator(_sheetName, _namespace, settingData, _headers);
+                                    scriptGenerator.DataScriptGenerate();
+                                }
                             }
                             EditorUtility.ClearProgressBar();
                             AssetDatabase.Refresh();
@@ -361,8 +368,15 @@ namespace ExcelLoader
                                     UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 엑셀 파일에 해당하는 CS파일이 존재하지 않습니다. {0}", _log);
                                     continue;
                                 }
-                                WriteBinary(_headers, _tableSheet, _tableType, _dataType, settingData.GetDataFullPath(), _sheetName);
-                                WriteCSV(_headers, _tableSheet, _dataType, settingData.GetCsvFullPath(), _sheetName);
+                                if (_headers.Count < 1)
+                                {
+                                    UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 엑셀 파일에 필드가 존재하지 않습니다. {0}", _log);
+                                }
+                                else
+                                {
+                                    WriteBinary(_headers, _tableSheet, _tableType, _dataType, settingData.GetDataFullPath(), _sheetName);
+                                    WriteCSV(_headers, _tableSheet, _dataType, settingData.GetCsvFullPath(), _sheetName);
+                                }
                             }
                             EditorUtility.ClearProgressBar();
                             AssetDatabase.Refresh();
