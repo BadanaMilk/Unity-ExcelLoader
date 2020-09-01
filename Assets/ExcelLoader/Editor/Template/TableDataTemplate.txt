@@ -4,6 +4,8 @@
 // Script file created by ScriptGenerator in ExcelLoader.
 // If you want to customize that data, create a partial script.
 // ========================================================
+$Namespace$
+
 namespace ExcelLoader
 {
 	[System.Serializable]

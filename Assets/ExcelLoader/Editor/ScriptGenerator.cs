@@ -16,6 +16,7 @@ namespace ExcelLoader
         public string dataTableName;
              
         string dataTemplate;
+        string nameSpaceText;
         const string memberFieldTemplate = "[UnityEngine.SerializeField] private $MemberType$ $MemberName$;\n\t\tpublic $MemberType$ Data_$MemberName$ { get { return $MemberName$; } }\n";
         const string dataParamsTemplate = "$MemberType$ _$MemberName$";
         const string memberInitTemplate = "$MemberName$ = _$MemberName$;";
@@ -27,18 +28,20 @@ namespace ExcelLoader
             dataTemplate = File.ReadAllText(ExcelLoader_Editor.excelLoaderPath + "/Template/TableDataTemplate.txt", Encoding.UTF8);
         }
 
-        public void SetScriptGenerator(string _sheetName, ExcelLoader_Setting _setting, List<HeaderData> _listHeader)
+        public void SetScriptGenerator(string _sheetName, string _nameSpaceText, ExcelLoader_Setting _setting, List<HeaderData> _listHeader)
         {
             dataFileName = GetDataName(_sheetName);
             dataTableName = _sheetName;
             setting = _setting;
             listHeader = _listHeader;
+            nameSpaceText = _nameSpaceText;
         }
 
         public void DataScriptGenerate()
         {
             string _csText = string.Copy(dataTemplate);
 
+            _csText = _csText.Replace("$Namespace$", nameSpaceText);
             _csText = _csText.Replace("$TableData$", dataFileName);
             _csText = _csText.Replace("$TableKey$", listHeader[0].HeaderName());
             _csText = _csText.Replace("$TableName$", dataTableName);

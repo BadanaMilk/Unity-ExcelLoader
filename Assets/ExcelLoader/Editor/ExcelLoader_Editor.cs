@@ -13,6 +13,7 @@ using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using UnityEditor.IMGUI.Controls;
 using System.Text;
+using System.Diagnostics;
 
 namespace ExcelLoader
 {
@@ -206,7 +207,8 @@ namespace ExcelLoader
             DrawSelectFolder("데이터 저장 경로", ref settingData.dataPath);
             DrawSelectFolder("CSV 저장 경로", ref settingData.csvPath);
 
-            if (GUILayout.Button("엑셀 파일 검색", GUILayout.Width(100)))
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("엑셀 파일 검색", GUILayout.Width(120)))
             {
                 listSearchedFiles.Clear();
                 string[] _arrData = Directory.GetFiles(settingData.GetExcelFullPath());
@@ -219,7 +221,17 @@ namespace ExcelLoader
                 multiListView.Reload();
                 singleListView.Reload();
             }
-
+            if (GUILayout.Button("네임스페이스 편집", GUILayout.Width(120)))
+            {
+                if (File.Exists(excelLoaderPath + "Setting/ExcelLoaderNamespace.txt") == false)
+                {
+                    FileStream _stream = File.Create(excelLoaderPath + "Setting/ExcelLoaderNamespace.txt");
+                    _stream.Close();
+                    AssetDatabase.Refresh();
+                }
+                Process.Start(Application.dataPath.Replace("Assets", excelLoaderPath) + "Setting/ExcelLoaderNamespace.txt");
+            }
+            EditorGUILayout.EndHorizontal();
             eExcelLoaderType _prevLoadType = currentLoadType;
             currentLoadType = (eExcelLoaderType)GUILayout.Toolbar((int)currentLoadType, new string[2] {"다중 선택", "단일 선택"});
             EditorGUILayout.EndVertical();
@@ -271,7 +283,8 @@ namespace ExcelLoader
                         {
                             EditorUtility.DisplayProgressBar("Work...", "CS파일 생성중...", 0);
                             IList<int> _selects = multiListView.GetSelection();
-                            listMultiSelects = (List<int>)_selects;
+                            listMultiSelects = new List<int>(_selects);
+                            string _namespace = LoadNamespaceText();
                             for (int _index = 0; _index < _selects.Count; _index++)
                             {
                                 TreeViewItem _item = multiListView.GetItem(_selects[_index]);
@@ -287,10 +300,10 @@ namespace ExcelLoader
                                 string _log = string.Format("File Name = {0}, Sheet Name = {1}", _item.displayName, _sheetName);
                                 if (_tableSheet == null)
                                 {
-                                    Debug.LogErrorFormat("ExcelLoader Error : 엑셀 파일에 해당 시트가 존재하지 않습니다. {0}", _log);
+                                    UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 엑셀 파일에 해당 시트가 존재하지 않습니다. {0}", _log);
                                     continue;
                                 }
-                                scriptGenerator.SetScriptGenerator(_sheetName, settingData, _headers);
+                                scriptGenerator.SetScriptGenerator(_sheetName, _namespace, settingData, _headers);
                                 scriptGenerator.DataScriptGenerate();
                             }
                             EditorUtility.ClearProgressBar();
@@ -320,7 +333,7 @@ namespace ExcelLoader
                         if (GUILayout.Button("바이너리,CSV 생성/갱신", GUILayout.Width(position.width / 2 - 5)))
                         {
                             IList<int> _selects = multiListView.GetSelection();
-                            listMultiSelects = (List<int>)_selects;
+                            listMultiSelects = new List<int>(_selects);
                             EditorUtility.DisplayProgressBar("Work...", "바이너리 작성중...", 0);
                             for (int _index = 0; _index < _selects.Count; _index++)
                             {
@@ -338,18 +351,18 @@ namespace ExcelLoader
                                 string _log = string.Format("File Name = {0}, Sheet Name = {1}", _item.displayName, _sheetName);
                                 if (_tableSheet == null)
                                 {
-                                    Debug.LogErrorFormat("ExcelLoader Error : 엑셀 파일에 해당 시트가 존재하지 않습니다. {0}", _log);
+                                    UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 엑셀 파일에 해당 시트가 존재하지 않습니다. {0}", _log);
                                     continue;
                                 }
                                 Type _tableType = ScriptGenerator.GetType("ExcelLoader.DataContainer");
                                 Type _dataType = ScriptGenerator.GetType(string.Format("ExcelLoader.{0}Data", _sheetName));
                                 if (_dataType == null)
                                 {
-                                    Debug.LogErrorFormat("ExcelLoader Error : 엑셀 파일에 해당하는 CS파일이 존재하지 않습니다. {0}", _log);
+                                    UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 엑셀 파일에 해당하는 CS파일이 존재하지 않습니다. {0}", _log);
                                     continue;
                                 }
                                 WriteBinary(_headers, _tableSheet, _tableType, _dataType, settingData.GetDataFullPath(), _sheetName);
-                                WriteCSV(_headers, _tableSheet, _dataType, settingData.GetDataFullPath(), _sheetName);
+                                WriteCSV(_headers, _tableSheet, _dataType, settingData.GetCsvFullPath(), _sheetName);
                             }
                             EditorUtility.ClearProgressBar();
                             AssetDatabase.Refresh();
@@ -413,7 +426,7 @@ namespace ExcelLoader
                         if (GUILayout.Button("바이너리,CSV 생성/갱신", GUILayout.Width(position.width / 2 - 5)))
                         {
                             WriteBinary(listSelectSheetHeaders, selectSheet, scriptGenerator.GetTableType(), scriptGenerator.GetDataType(), settingData.GetDataFullPath(), scriptGenerator.dataTableName);
-                            WriteCSV(listSelectSheetHeaders, selectSheet, scriptGenerator.GetDataType(), settingData.GetDataFullPath(), scriptGenerator.dataTableName);
+                            WriteCSV(listSelectSheetHeaders, selectSheet, scriptGenerator.GetDataType(), settingData.GetCsvFullPath(), scriptGenerator.dataTableName);
                             AssetDatabase.Refresh();
                             RefreshGUI();
                         }
@@ -500,9 +513,15 @@ namespace ExcelLoader
             if (_listHeader != null)
                 listSelectSheetHeaders = _listHeader;
 
-            scriptGenerator.SetScriptGenerator(selectSheet.SheetName, settingData, listSelectSheetHeaders);
+            scriptGenerator.SetScriptGenerator(selectSheet.SheetName, LoadNamespaceText(), settingData, listSelectSheetHeaders);
         }
 
+        /// <summary>
+        /// 트리뷰아이템에서 엑셀 파일 경로와 시트이름을 얻는다.
+        /// </summary>
+        /// <param name="_item"></param>
+        /// <param name="_excelFilePath"></param>
+        /// <param name="_sheetName"></param>
         void GetExcelFilePathAndSheetName(TreeViewItem _item, out string _excelFilePath, out string _sheetName)
         {
             ExcelLoaderTreeView.ExcelLoaderTreeViewItem _treeViewItem = _item as ExcelLoaderTreeView.ExcelLoaderTreeViewItem;
@@ -542,7 +561,7 @@ namespace ExcelLoader
             }
             catch (Exception e)
             {
-                Debug.LogError(e.Message);
+                UnityEngine.Debug.LogError(e.Message);
             }
         }
 
@@ -567,14 +586,14 @@ namespace ExcelLoader
                 var _cell = title.GetCell(i);
                 if (_cell == null || string.IsNullOrEmpty(_cell.StringCellValue))
                 {
-                    Debug.LogWarningFormat("ExcelLoader Error : 셀이 비어있습니다. {0}칼럼", i);
+                    UnityEngine.Debug.LogWarningFormat("ExcelLoader Error : 셀이 비어있습니다. {0}칼럼", i);
                     continue;
                 }
                 string _header = _cell.StringCellValue;
                 string[] _headerData = _header.Split('-');
                 if (_headerData.Length < 2)
                 {
-                    Debug.LogWarningFormat("ExcelLoader Warning : 이 셀에 자료형 구분자가 존재하지 않습니다. {0}칼럼", i);
+                    UnityEngine.Debug.LogWarningFormat("ExcelLoader Warning : 이 셀에 자료형 구분자가 존재하지 않습니다. {0}칼럼", i);
                     continue;
                 }
                 else
@@ -584,7 +603,7 @@ namespace ExcelLoader
                     CellType _eType = CellType.None;
                     if (Enum.TryParse(new string(_type), out _eType) == false)
                     {
-                        Debug.LogErrorFormat("ExcelLoader Error : 엑셀에 잘못된 타입 이름이 들어가있습니다. 테이블={0}, 시트={1}, 필드명={2}", _workBookName, _sheetName, _headerData[1]);
+                        UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 엑셀에 잘못된 타입 이름이 들어가있습니다. 테이블={0}, 시트={1}, 필드명={2}", _workBookName, _sheetName, _headerData[1]);
                         return null;
                     }
                     int _arrayGroupID = 0;
@@ -594,7 +613,7 @@ namespace ExcelLoader
                         _arrayGroup = _arrayGroup[_arrayGroup.Length - 1].ToString();
                         if (int.TryParse(_arrayGroup, out _arrayGroupID) == false)
                         {
-                            Debug.LogErrorFormat("ExcelLoader Error : 필드에 배열로 지정했는데 그룹 넘버없습니다. 테이블={0}, 시트={1}, 필드명={2}", _workBookName, _sheetName, _headerData[1]);
+                            UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 필드에 배열로 지정했는데 그룹 넘버없습니다. 테이블={0}, 시트={1}, 필드명={2}", _workBookName, _sheetName, _headerData[1]);
                             return null;
                         }
                     }
@@ -628,6 +647,14 @@ namespace ExcelLoader
             return _headers;
         }
 
+        /// <summary>
+        /// 네임스페이스 텍스트를 얻는다.
+        /// </summary>
+        /// <returns></returns>
+        string LoadNamespaceText()
+        {
+            return File.ReadAllText(excelLoaderPath + "Setting/ExcelLoaderNamespace.txt", Encoding.UTF8);
+        }
         /// <summary>
         /// 경로에서 확장자 문자열을 얻는함수
         /// </summary>
