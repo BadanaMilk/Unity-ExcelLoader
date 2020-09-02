@@ -22,6 +22,7 @@ namespace ExcelLoader
         None,
         String,
         Byte,
+        Short,
         Int,
         Long,
         Float,
@@ -703,17 +704,59 @@ namespace ExcelLoader
                 else if (_cell.CellType == NPOI.SS.UserModel.CellType.String)
                 {
                     if (_type == typeof(byte))
-                        _value = Convert.ToByte(_cell.StringCellValue);
-                    if (_type == typeof(float))
-                        _value = Convert.ToSingle(_cell.StringCellValue);
-                    if (_type == typeof(double))
-                        _value = Convert.ToDouble(_cell.StringCellValue);
-                    if (_type == typeof(short))
-                        _value = Convert.ToInt16(_cell.StringCellValue);
-                    if (_type == typeof(int))
-                        _value = Convert.ToInt32(_cell.StringCellValue);
-                    if (_type == typeof(long))
-                        _value = Convert.ToInt64(_cell.StringCellValue);
+                    {
+                        byte _parseValue = 0;
+                        if (byte.TryParse(_cell.StringCellValue, out _parseValue) == false)
+                        {
+                            UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 잘못된 타입의 값이 들어가있습니다. 시트={0}, 행={1}, 열={2},", _cell.Sheet.SheetName, _cell.RowIndex, _cell.ColumnIndex);
+                        }
+                        _value = _parseValue;
+                    }
+                    else if (_type == typeof(float))
+                    {
+                        float _parseValue = 0;
+                        if (float.TryParse(_cell.StringCellValue, out _parseValue) == false)
+                        {
+                            UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 잘못된 타입의 값이 들어가있습니다. 시트={0}, 행={1}, 열={2},", _cell.Sheet.SheetName, _cell.RowIndex, _cell.ColumnIndex);
+                        }
+                        _value = _parseValue;
+                    }
+                    else if (_type == typeof(double))
+                    {
+                        double _parseValue = 0;
+                        if (double.TryParse(_cell.StringCellValue, out _parseValue) == false)
+                        {
+                            UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 잘못된 타입의 값이 들어가있습니다. 시트={0}, 행={1}, 열={2},", _cell.Sheet.SheetName, _cell.RowIndex, _cell.ColumnIndex);
+                        }
+                        _value = _parseValue;
+                    }
+                    else if (_type == typeof(short))
+                    {
+                        short _parseValue = 0;
+                        if (short.TryParse(_cell.StringCellValue, out _parseValue) == false)
+                        {
+                            UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 잘못된 타입의 값이 들어가있습니다. 시트={0}, 행={1}, 열={2},", _cell.Sheet.SheetName, _cell.RowIndex, _cell.ColumnIndex);
+                        }
+                        _value = _parseValue;
+                    }
+                    else if (_type == typeof(int))
+                    {
+                        int _parseValue = 0;
+                        if (int.TryParse(_cell.StringCellValue, out _parseValue) == false)
+                        {
+                            UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 잘못된 타입의 값이 들어가있습니다. 시트={0}, 행={1}, 열={2},", _cell.Sheet.SheetName, _cell.RowIndex, _cell.ColumnIndex);
+                        }
+                        _value = _parseValue;
+                    }
+                    else if (_type == typeof(long))
+                    {
+                        long _parseValue = 0;
+                        if (long.TryParse(_cell.StringCellValue, out _parseValue) == false)
+                        {
+                            UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 잘못된 타입의 값이 들어가있습니다. 시트={0}, 행={1}, 열={2},", _cell.Sheet.SheetName, _cell.RowIndex, _cell.ColumnIndex);
+                        }
+                        _value = _parseValue;
+                    }
                 }
                 else if (_cell.CellType == NPOI.SS.UserModel.CellType.Formula)
                 {
@@ -747,8 +790,21 @@ namespace ExcelLoader
             }
             else if (_type.IsEnum)
             {
-                _value = _cell.StringCellValue;
-                return Enum.Parse(_type, _value.ToString(), true);
+                if (_cell.CellType == NPOI.SS.UserModel.CellType.Numeric)
+                {
+                    int _intValue = 0;
+                    if (Int32.TryParse(_cell.NumericCellValue.ToString(), out _intValue) == false)
+                    {
+                        UnityEngine.Debug.LogError("ExcelLoader Error : Enum타입이 잘못 기입되어있습니다.");
+                    }
+                    else
+                        _value = Enum.ToObject(_type, _intValue);
+                }
+                else
+                {
+                    _value = Enum.Parse(_type, _cell.StringCellValue, true);
+                }
+                return _value;
             }
 
             if (_type.IsArray)
@@ -801,7 +857,7 @@ namespace ExcelLoader
                 {
                     ICell _cell = _row.GetCell(_headerData[_index].cellColumnIndex);
 
-                    if (_cell == null)
+                    if (_cell == null || _cell.CellType == NPOI.SS.UserModel.CellType.Blank)
                         continue;
 
                     if (_headerData[_index].arrayGroup > 0)
@@ -856,7 +912,7 @@ namespace ExcelLoader
                         {
                             ICell _cell = _row.GetCell(_headerData[_index].cellColumnIndex);
 
-                            if (_cell == null)
+                            if (_cell == null || _cell.CellType == NPOI.SS.UserModel.CellType.Blank)
                                 continue;
 
                             object _data;
