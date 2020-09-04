@@ -4,26 +4,24 @@
 // Script file created by ScriptGenerator in ExcelLoader.
 // If you want to customize that data, create a partial script.
 // ========================================================
+using ExcelLoader;
 $Namespace$
 
-namespace ExcelLoader
+[System.Serializable]
+public partial class $TableData$ : iTableDataBase
 {
-	[System.Serializable]
-	public partial class $TableData$ : iTableDataBase
-	{
-		public string GetTableName() { return "$TableName$"; }
+	public string GetTableName() { return "$TableName$"; }
 
-		public object GetKey() { return $TableKey$ ; }
+	public object GetKey() { return $TableKey$ ; }
 
-		$MembersField$
+	$MembersField$
 
-		public $TableData$()
-		{ 
-		}
+	public $TableData$()
+	{ 
+	}
 
-		public $TableData$($DataParam$)
-		{ 
-			$MembersInit$
-		}
+	public $TableData$($DataParam$)
+	{ 
+		$MembersInit$
 	}
 }
