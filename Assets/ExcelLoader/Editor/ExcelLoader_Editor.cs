@@ -363,7 +363,7 @@ namespace ExcelLoader
                                     continue;
                                 }
                                 Type _tableType = ScriptGenerator.GetType("ExcelLoader.DataContainer");
-                                Type _dataType = ScriptGenerator.GetType(string.Format("ExcelLoader.{0}Data", _sheetName));
+                                Type _dataType = ScriptGenerator.GetType(string.Format("{0}Data", _sheetName));
                                 if (_dataType == null)
                                 {
                                     UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 엑셀 파일에 해당하는 CS파일이 존재하지 않습니다. {0}", _log);
