@@ -17,7 +17,7 @@ namespace ExcelLoader
              
         string dataTemplate;
         string nameSpaceText;
-        const string memberFieldTemplate = "[UnityEngine.SerializeField] private $MemberType$ $MemberName$;\n\t\tpublic $MemberType$ Data_$MemberName$ { get { return $MemberName$; } }\n";
+        const string memberFieldTemplate = "[UnityEngine.SerializeField] private $MemberType$ $MemberName$;\n\tpublic $MemberType$ Data_$MemberName$ { get { return $MemberName$; } }\n";
         const string dataParamsTemplate = "$MemberType$ _$MemberName$";
         const string memberInitTemplate = "$MemberName$ = _$MemberName$;";
 
@@ -56,9 +56,9 @@ namespace ExcelLoader
                 _strMemberInits[_index] = memberInitTemplate.Replace("$MemberType$", listHeader[_index].TypeName()).Replace("$MemberName$", listHeader[_index].HeaderName());
             }
             
-            _csText = _csText.Replace("$MembersField$", string.Join("\n\t\t", _stringMember));
-            _csText = _csText.Replace("$DataParam$", string.Join(",\n\t\t\t", _strDataParams));
-            _csText = _csText.Replace("$MembersInit$", string.Join("\n\t\t\t", _strMemberInits));
+            _csText = _csText.Replace("$MembersField$", string.Join("\n\t", _stringMember));
+            _csText = _csText.Replace("$DataParam$", string.Join(",\n\t\t", _strDataParams));
+            _csText = _csText.Replace("$MembersInit$", string.Join("\n\t\t", _strMemberInits));
 
             string _fullPath = string.Format("{0}/{1}.cs", setting.GetClassFullPath(), dataFileName);
             string _folderPath = Path.GetDirectoryName(_fullPath);
