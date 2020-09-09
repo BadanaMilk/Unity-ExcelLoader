@@ -900,7 +900,7 @@ namespace ExcelLoader
             List<PropertyInfo> _dataPropertyInfo = _dataType.GetProperties().ToList();
             _dataPropertyInfo = _dataPropertyInfo.FindAll(_item => _headerData.Find(_header => _header.GetMemberName() == _item.Name) != null);
 
-            using (var wtr = new StreamWriter(_savepath + string.Format("/{0}.csv", _filename)))
+            using (var wtr = new StreamWriter(_savepath + string.Format("/{0}.csv", _filename), false, Encoding.UTF8))
             {
                 foreach (IRow _row in _sheet)
                 {
