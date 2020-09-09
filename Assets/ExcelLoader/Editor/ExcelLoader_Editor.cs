@@ -839,8 +839,8 @@ namespace ExcelLoader
             var _listInstance = Activator.CreateInstance(_listType);
             IList _list = (IList)_listInstance;
 
-            PropertyInfo[] _dataPropertyInfo = _dataType.GetProperties();
-
+            List<PropertyInfo> _dataPropertyInfo = _dataType.GetProperties().ToList();
+            _dataPropertyInfo = _dataPropertyInfo.FindAll(_item => _headerData.Find(_header => _header.GetMemberName() == _item.Name) != null);
             foreach (IRow _row in _sheet)
             {
                 if (_row.RowNum < 1)
@@ -852,18 +852,24 @@ namespace ExcelLoader
                 if (_keyCell == null || _keyCell.CellType == NPOI.SS.UserModel.CellType.Blank)
                     continue;
 
-                object[] _propertyDatas = new object[_dataPropertyInfo.Length];
-                for (int _index = 0; _index < _dataPropertyInfo.Length; _index++)
+                object[] _propertyDatas = new object[_headerData.Count];
+                for (int _index = 0; _index < _headerData.Count; _index++)
                 {
                     ICell _cell = _row.GetCell(_headerData[_index].cellColumnIndex);
 
                     if (_cell == null || _cell.CellType == NPOI.SS.UserModel.CellType.Blank)
                         continue;
 
+                    PropertyInfo _property = _dataPropertyInfo.Find(_item => _item.Name == _headerData[_index].GetMemberName());
+                    if (_property == null)
+                    {
+                        UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 데이터 클래스에 헤더에 맞는 변수가 없습니다. 시트={0}, 변수명={1}", _cell.Sheet.SheetName, _headerData[_index].name);
+                        return;
+                    }
                     if (_headerData[_index].arrayGroup > 0)
                     {
                         List<int> _listArrayColurm = _headerData[_index].GetArrayColurms();
-                        Type _elementType = _dataPropertyInfo[_index].PropertyType.GetElementType();
+                        Type _elementType = _property.PropertyType.GetElementType();
                         var _arrayDatas = Array.CreateInstance(_elementType, _listArrayColurm.Count);
                         for (int _index_2 = 0; _index_2 < _listArrayColurm.Count; _index_2++)
                         {
@@ -874,7 +880,7 @@ namespace ExcelLoader
                     }
                     else
                     {
-                        _propertyDatas[_index] = ConvertFrom(_cell, _dataPropertyInfo[_index].PropertyType);
+                        _propertyDatas[_index] = ConvertFrom(_cell, _property.PropertyType);
                     }
                 }
                 iTableDataBase _data = (iTableDataBase)Activator.CreateInstance(_dataType, _propertyDatas);
@@ -891,52 +897,56 @@ namespace ExcelLoader
 
         void WriteCSV(List<HeaderData> _headerData, ISheet _sheet, Type _dataType, string _savepath, string _filename)
         {
-            PropertyInfo[] _dataPropertyInfo = _dataType.GetProperties();
+            List<PropertyInfo> _dataPropertyInfo = _dataType.GetProperties().ToList();
+            _dataPropertyInfo = _dataPropertyInfo.FindAll(_item => _headerData.Find(_header => _header.GetMemberName() == _item.Name) != null);
 
             using (var wtr = new StreamWriter(_savepath + string.Format("/{0}.csv", _filename)))
             {
                 foreach (IRow _row in _sheet)
                 {
                     if (_row.RowNum < 1)
-                    {
                         continue;
-                    }
-                    else
+
+                    ICell _keyCell = _row.GetCell(0);
+                    if (_keyCell == null || _keyCell.CellType == NPOI.SS.UserModel.CellType.Blank)
+                        continue;
+
+                    string[] _stringCells = new string[_headerData.Count];
+                    for (int _index = 0; _index < _headerData.Count; _index++)
                     {
-                        ICell _keyCell = _row.GetCell(0);
-                        if (_keyCell == null || _keyCell.CellType == NPOI.SS.UserModel.CellType.Blank)
+                        ICell _cell = _row.GetCell(_headerData[_index].cellColumnIndex);
+
+                        if (_cell == null || _cell.CellType == NPOI.SS.UserModel.CellType.Blank)
                             continue;
 
-                        string[] _stringCells = new string[_headerData.Count];
-                        for (int _index = 0; _index < _headerData.Count; _index++)
+                        PropertyInfo _property = _dataPropertyInfo.Find(_item => _item.Name == _headerData[_index].GetMemberName());
+                        if (_property == null)
                         {
-                            ICell _cell = _row.GetCell(_headerData[_index].cellColumnIndex);
-
-                            if (_cell == null || _cell.CellType == NPOI.SS.UserModel.CellType.Blank)
-                                continue;
-
-                            object _data;
-                            if (_headerData[_index].arrayGroup > 0)
-                            {
-                                List<int> _listArrayColurm = _headerData[_index].GetArrayColurms();
-                                Type _elementType = _dataPropertyInfo[_index].PropertyType.GetElementType();
-                                string[] _arrayDatas = new string[_listArrayColurm.Count];
-                                for (int _index_2 = 0; _index_2 < _listArrayColurm.Count; _index_2++)
-                                {
-                                    ICell _arrayDataCell = _row.GetCell(_listArrayColurm[_index_2]);
-                                    _arrayDatas[_index_2] = ConvertFrom(_arrayDataCell, _elementType).ToString();
-                                }
-                                _data = string.Join(",", _arrayDatas);
-                            }
-                            else
-                            {
-                                _data = ConvertFrom(_cell, _dataPropertyInfo[_index].PropertyType);
-                            }
-
-                            _stringCells[_index] = _data.ToString();
+                            UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 데이터 클래스에 헤더에 맞는 변수가 없습니다. 시트={0}, 변수명={1}", _cell.Sheet.SheetName, _headerData[_index].name);
+                            return;
                         }
-                        wtr.WriteLine(string.Join(",", _stringCells));
+
+                        object _data;
+                        if (_headerData[_index].arrayGroup > 0)
+                        {
+                            List<int> _listArrayColurm = _headerData[_index].GetArrayColurms();
+                            Type _elementType = _property.PropertyType.GetElementType();
+                            string[] _arrayDatas = new string[_listArrayColurm.Count];
+                            for (int _index_2 = 0; _index_2 < _listArrayColurm.Count; _index_2++)
+                            {
+                                ICell _arrayDataCell = _row.GetCell(_listArrayColurm[_index_2]);
+                                _arrayDatas[_index_2] = ConvertFrom(_arrayDataCell, _elementType).ToString();
+                            }
+                            _data = string.Join(",", _arrayDatas);
+                        }
+                        else
+                        {
+                            _data = ConvertFrom(_cell, _property.PropertyType);
+                        }
+
+                        _stringCells[_index] = _data.ToString();
                     }
+                    wtr.WriteLine(string.Join(",", _stringCells));
                 }
             }
         }
@@ -982,9 +992,9 @@ namespace ExcelLoader
             return _typeName;
         }
 
-        public string HeaderName()
+        public string GetMemberName()
         {
-            return name;
+            return "Data_" + name;
         }
 
         public void SetArrayData(int _groupID)

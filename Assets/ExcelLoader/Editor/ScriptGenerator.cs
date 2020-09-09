@@ -17,7 +17,7 @@ namespace ExcelLoader
              
         string dataTemplate;
         string nameSpaceText;
-        const string memberFieldTemplate = "[UnityEngine.SerializeField] private $MemberType$ $MemberName$;\n\tpublic $MemberType$ Data_$MemberName$ { get { return $MemberName$; } }\n";
+        const string memberFieldTemplate = "[UnityEngine.SerializeField] private $MemberType$ $MemberName$;\n\tpublic $MemberType$ Data_$MemberName$ { get { return $MemberName$; } set { $MemberName$ = value; }}\n";
         const string dataParamsTemplate = "$MemberType$ _$MemberName$";
         const string memberInitTemplate = "$MemberName$ = _$MemberName$;";
 
@@ -43,7 +43,7 @@ namespace ExcelLoader
 
             _csText = _csText.Replace("$Namespace$", nameSpaceText);
             _csText = _csText.Replace("$TableData$", dataFileName);
-            _csText = _csText.Replace("$TableKey$", listHeader[0].HeaderName());
+            _csText = _csText.Replace("$TableKey$", listHeader[0].name);
             _csText = _csText.Replace("$TableName$", dataTableName);
 
             string[] _stringMember = new string[listHeader.Count];
@@ -51,9 +51,9 @@ namespace ExcelLoader
             string[] _strMemberInits = new string[listHeader.Count];
             for (int _index = 0; _index < listHeader.Count; _index++)
             {
-                _stringMember[_index] = memberFieldTemplate.Replace("$MemberType$", listHeader[_index].TypeName()).Replace("$MemberName$", listHeader[_index].HeaderName());
-                _strDataParams[_index] = dataParamsTemplate.Replace("$MemberType$", listHeader[_index].TypeName()).Replace("$MemberName$", listHeader[_index].HeaderName());
-                _strMemberInits[_index] = memberInitTemplate.Replace("$MemberType$", listHeader[_index].TypeName()).Replace("$MemberName$", listHeader[_index].HeaderName());
+                _stringMember[_index] = memberFieldTemplate.Replace("$MemberType$", listHeader[_index].TypeName()).Replace("$MemberName$", listHeader[_index].name);
+                _strDataParams[_index] = dataParamsTemplate.Replace("$MemberType$", listHeader[_index].TypeName()).Replace("$MemberName$", listHeader[_index].name);
+                _strMemberInits[_index] = memberInitTemplate.Replace("$MemberType$", listHeader[_index].TypeName()).Replace("$MemberName$", listHeader[_index].name);
             }
             
             _csText = _csText.Replace("$MembersField$", string.Join("\n\t", _stringMember));
