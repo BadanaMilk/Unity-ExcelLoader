@@ -451,12 +451,13 @@ namespace ExcelLoader
                         GUI.enabled = !isCompiling;
                         GUILayout.EndHorizontal();
 
-                        //if (GUILayout.Button("테이블 로드 테스트"))
-                        //{
-                        //    string _path = settingData.dataPath + '/' + scriptGenerator.dataTableName + ".bytes";
-                        //    _path = _path.Remove(0, _path.IndexOf("Assets"));
-                        //    DataContainer _table = DataContainer.LoadTable(AssetDatabase.LoadAssetAtPath<TextAsset>(_path));
-                        //}
+                        if (GUILayout.Button("테이블 로드 테스트"))
+                        {
+                            string _path = settingData.dataPath + '/' + scriptGenerator.dataTableName + ".bytes";
+                            _path = _path.Remove(0, _path.IndexOf("Assets"));
+                            DataContainer _table = DataContainer.LoadTable(AssetDatabase.LoadAssetAtPath<TextAsset>(_path));
+                            int _test = 0;
+                        }
                     }
                     break;
                 default:
@@ -842,7 +843,8 @@ namespace ExcelLoader
             Type _listType = typeof(List<>).MakeGenericType(_dataType);
             var _listInstance = Activator.CreateInstance(_listType);
             IList _list = (IList)_listInstance;
-
+                        
+            Dictionary<object, iTableDataBase> _checkKeyData = new Dictionary<object, iTableDataBase>();
             List<PropertyInfo> _dataPropertyInfo = _dataType.GetProperties().ToList();
             _dataPropertyInfo = _dataPropertyInfo.FindAll(_item => _headerData.Find(_header => _header.GetMemberName() == _item.Name) != null);
             foreach (IRow _row in _sheet)
@@ -867,7 +869,7 @@ namespace ExcelLoader
                     PropertyInfo _property = _dataPropertyInfo.Find(_item => _item.Name == _headerData[_index].GetMemberName());
                     if (_property == null)
                     {
-                        UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 데이터 클래스에 헤더에 맞는 변수가 없습니다. 시트={0}, 변수명={1}", _cell.Sheet.SheetName, _headerData[_index].name);
+                        EditorUtility.DisplayDialog("오류", string.Format("데이터 클래스에 헤더에 맞는 변수가 없습니다.\n시트={0}\n변수명={1}", _cell.Sheet.SheetName, _headerData[_index].name), "확인");
                         return;
                     }
                     if (_headerData[_index].arrayGroup > 0)
@@ -889,8 +891,16 @@ namespace ExcelLoader
                 }
                 iTableDataBase _data = (iTableDataBase)Activator.CreateInstance(_dataType, _propertyDatas);
                 _list.Add(_data);
-            }
-
+                if (_checkKeyData.ContainsKey(_data.GetKey()) == false)
+                {
+                    _checkKeyData.Add(_data.GetKey(), _data);
+                }
+                else
+                {
+                    EditorUtility.DisplayDialog("오류", string.Format("같은 키값이 존재합니다.\n테이블명={0}\n 중복 키값={1}", _sheet.SheetName, _data.GetKey()), "확인");
+                    return;
+                }
+            }            
             var _var = Activator.CreateInstance(_tableType, _list, _dataType);
             DataContainer _table = (DataContainer)_var;
             StreamWriter sWriter = new StreamWriter(_savepath + string.Format("/{0}.bytes", _filename));            
