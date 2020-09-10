@@ -98,12 +98,7 @@ namespace ExcelLoader
         {
             if (instance != null)
                 DestroyImmediate(instance);
-            instance = EditorWindow.CreateInstance<ExcelLoader_Editor>();
-
-            string _filePath = new System.Diagnostics.StackTrace(true).GetFrame(0).GetFileName();
-            excelLoaderPath = _filePath.Remove(0, _filePath.IndexOf("Assets")).Replace("\\", "/").Replace("ExcelLoader_Editor.cs", "");
-
-            instance.Init();
+            instance = EditorWindow.GetWindow<ExcelLoader_Editor>();
             instance.Show();
         }
 
@@ -116,6 +111,14 @@ namespace ExcelLoader
                 instance = _editors[0];
                 instance.RefreshEditor();
             }
+        }
+
+        private void Awake()
+        {
+            instance = this;
+            string _filePath = new System.Diagnostics.StackTrace(true).GetFrame(0).GetFileName();
+            excelLoaderPath = _filePath.Remove(0, _filePath.IndexOf("Assets")).Replace("\\", "/").Replace("ExcelLoader_Editor.cs", "");
+            Init();
         }
 
         private void OnDestroy()
@@ -670,6 +673,7 @@ namespace ExcelLoader
         {
             return File.ReadAllText(excelLoaderPath + "Setting/ExcelLoaderNamespace.txt", Encoding.UTF8);
         }
+
         /// <summary>
         /// 경로에서 확장자 문자열을 얻는함수
         /// </summary>
