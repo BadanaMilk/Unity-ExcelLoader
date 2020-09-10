@@ -378,8 +378,8 @@ namespace ExcelLoader
                                 }
                                 else
                                 {
-                                    WriteBinary(_headers, _tableSheet, _tableType, _dataType, settingData.GetDataFullPath(), _sheetName);
-                                    WriteCSV(_headers, _tableSheet, _dataType, settingData.GetCsvFullPath(), _sheetName);
+                                    if (WriteBinary(_headers, _tableSheet, _tableType, _dataType, settingData.GetDataFullPath(), _sheetName))
+                                        WriteCSV(_headers, _tableSheet, _dataType, settingData.GetCsvFullPath(), _sheetName);
                                 }
                             }
                             EditorUtility.ClearProgressBar();
@@ -443,8 +443,15 @@ namespace ExcelLoader
                         GUI.enabled = !isCompiling && (selectSheet == null ? false : File.Exists(string.Format("{0}/{1}.cs", settingData.GetClassFullPath(), scriptGenerator.dataFileName)));
                         if (GUILayout.Button("바이너리,CSV 생성/갱신", GUILayout.Width(position.width / 2 - 5)))
                         {
-                            WriteBinary(listSelectSheetHeaders, selectSheet, scriptGenerator.GetTableType(), scriptGenerator.GetDataType(), settingData.GetDataFullPath(), scriptGenerator.dataTableName);
-                            WriteCSV(listSelectSheetHeaders, selectSheet, scriptGenerator.GetDataType(), settingData.GetCsvFullPath(), scriptGenerator.dataTableName);
+                            if (WriteBinary(listSelectSheetHeaders,
+                                selectSheet,
+                                scriptGenerator.GetTableType(),
+                                scriptGenerator.GetDataType(),
+                                settingData.GetDataFullPath(),
+                                scriptGenerator.dataTableName))
+                            {
+                                WriteCSV(listSelectSheetHeaders, selectSheet, scriptGenerator.GetDataType(), settingData.GetCsvFullPath(), scriptGenerator.dataTableName);
+                            }
                             AssetDatabase.Refresh();
                             RefreshGUI();
                         }
@@ -838,7 +845,7 @@ namespace ExcelLoader
         /// <param name="_dataType">데이터 타입</param>
         /// <param name="_savepath">저장 경로</param>
         /// <param name="_filename">파일 이름</param>
-        void WriteBinary(List<HeaderData> _headerData, ISheet _sheet, Type _tableType, Type _dataType, string _savepath, string _filename)
+        bool WriteBinary(List<HeaderData> _headerData, ISheet _sheet, Type _tableType, Type _dataType, string _savepath, string _filename)
         {
             Type _listType = typeof(List<>).MakeGenericType(_dataType);
             var _listInstance = Activator.CreateInstance(_listType);
@@ -870,7 +877,7 @@ namespace ExcelLoader
                     if (_property == null)
                     {
                         EditorUtility.DisplayDialog("오류", string.Format("데이터 클래스에 헤더에 맞는 변수가 없습니다.\n시트={0}\n변수명={1}", _cell.Sheet.SheetName, _headerData[_index].name), "확인");
-                        return;
+                        return false;
                     }
                     if (_headerData[_index].arrayGroup > 0)
                     {
@@ -898,7 +905,7 @@ namespace ExcelLoader
                 else
                 {
                     EditorUtility.DisplayDialog("오류", string.Format("같은 키값이 존재합니다.\n테이블명={0}\n 중복 키값={1}", _sheet.SheetName, _data.GetKey()), "확인");
-                    return;
+                    return false;
                 }
             }            
             var _var = Activator.CreateInstance(_tableType, _list, _dataType);
@@ -907,6 +914,7 @@ namespace ExcelLoader
             BinaryFormatter bin = new BinaryFormatter();
             bin.Serialize(sWriter.BaseStream, _table);
             sWriter.Close();
+            return true;
         }
 
         void WriteCSV(List<HeaderData> _headerData, ISheet _sheet, Type _dataType, string _savepath, string _filename)
