@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿#define ConvertType
+
+using UnityEngine;
 using System;
 using System.Linq;
 using System.IO;
@@ -35,7 +37,12 @@ namespace ExcelLoader
             dictionaryDatas = new Dictionary<object, iTableDataBase>();
             for (int _index = 0; _index < listDatas.Count; _index++)
             {
-                dictionaryDatas.Add(listDatas[_index].GetKey(), listDatas[_index]);
+                if (dictionaryDatas.ContainsKey(listDatas[_index].GetKey()))
+                {
+                    Debug.LogErrorFormat("ExcelLoader Error : 같은 키값이 존재합니다. 테이블명={0}, 중복 키값={1}", dataType.Name, listDatas[_index].GetKey());
+                }
+                else
+                    dictionaryDatas.Add(listDatas[_index].GetKey(), listDatas[_index]);
             }
             //런타임에서 사용하는건 딕셔너리라서 필요없는 리스트는 클리어해준다.
             listDatas.Clear();
@@ -49,10 +56,26 @@ namespace ExcelLoader
         /// <returns>테이블값</returns>
         public TData GetValueFromKey<TData>(object _key) where TData : iTableDataBase
         {
+#if ConvertType
+            Type _types = dictionaryDatas.Keys.First().GetType();
+
+            if (_types != _key.GetType())
+            {
+                Debug.LogErrorFormat("ExcelLoader Error : 테이블에 입력된 데이터 타입과 파라미터의 키값 타입이 다릅니다. \n테이블 데이터 = {0}\n입력타입={1}\n테이블타입{2}", 
+                    typeof(TData).Name, _key.GetType().Name, _types.Name);
+            }
+            object _changeKey = Convert.ChangeType(_key, _types);
+
+            if (dictionaryDatas.ContainsKey(_changeKey))
+                return (TData)dictionaryDatas[_changeKey];
+            else
+                return default(TData);
+#else
             if (dictionaryDatas.ContainsKey(_key))
                 return (TData)dictionaryDatas[_key];
             else
                 return default(TData);
+#endif
         }
 
         /// <summary>
@@ -65,11 +88,29 @@ namespace ExcelLoader
         public bool TryGetValueFromKey<TData>(object _key, out TData _data) where TData : iTableDataBase
         {
             iTableDataBase _baseData = null;
+
+#if ConvertType
+            Type _types = dictionaryDatas.Keys.First().GetType();
+
+            if (_types != _key.GetType())
+            {
+                Debug.LogErrorFormat("ExcelLoader Error : 테이블에 입력된 데이터 타입과 파라미터의 키값 타입이 다릅니다. \n테이블 데이터 = {0}\n입력타입={1}\n테이블타입{2}",
+                    typeof(TData).Name, _key.GetType().Name, _types.Name);
+            }
+            object _changeKey = Convert.ChangeType(_key, _types);
+
+            if (dictionaryDatas.TryGetValue(_changeKey, out _baseData))
+            {
+                _data = (TData)_baseData;
+                return true;
+            }
+#else
             if (dictionaryDatas.TryGetValue(_key, out _baseData))
             {
                 _data = (TData)_baseData;
                 return true;
             }
+#endif
             else
             {
                 _data = default(TData);
@@ -118,6 +159,11 @@ namespace ExcelLoader
                 _results[_index] = (TData)dictionaryDatas[keys.ElementAt(_index)];
             }
             return keys.Count() > 0;
+        }
+
+        public TData[] GetAllDatas<TData>() where TData : iTableDataBase
+        {
+            return dictionaryDatas.Values.Select(_item => (TData)_item).ToArray();
         }
 
         /// <summary>

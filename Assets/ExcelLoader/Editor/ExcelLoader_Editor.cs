@@ -378,7 +378,7 @@ namespace ExcelLoader
                                 }
                                 else
                                 {
-                                    if (WriteBinary(_headers, _tableSheet, _tableType, _dataType, settingData.GetDataFullPath(), _sheetName))
+                                    if(WriteBinary(_headers, _tableSheet, _tableType, _dataType, settingData.GetDataFullPath(), _sheetName))
                                         WriteCSV(_headers, _tableSheet, _dataType, settingData.GetCsvFullPath(), _sheetName);
                                 }
                             }
@@ -443,7 +443,8 @@ namespace ExcelLoader
                         GUI.enabled = !isCompiling && (selectSheet == null ? false : File.Exists(string.Format("{0}/{1}.cs", settingData.GetClassFullPath(), scriptGenerator.dataFileName)));
                         if (GUILayout.Button("바이너리,CSV 생성/갱신", GUILayout.Width(position.width / 2 - 5)))
                         {
-                            if (WriteBinary(listSelectSheetHeaders,
+                            if (WriteBinary(
+                                listSelectSheetHeaders,
                                 selectSheet,
                                 scriptGenerator.GetTableType(),
                                 scriptGenerator.GetDataType(),
@@ -458,13 +459,12 @@ namespace ExcelLoader
                         GUI.enabled = !isCompiling;
                         GUILayout.EndHorizontal();
 
-                        if (GUILayout.Button("테이블 로드 테스트"))
-                        {
-                            string _path = settingData.dataPath + '/' + scriptGenerator.dataTableName + ".bytes";
-                            _path = _path.Remove(0, _path.IndexOf("Assets"));
-                            DataContainer _table = DataContainer.LoadTable(AssetDatabase.LoadAssetAtPath<TextAsset>(_path));
-                            int _test = 0;
-                        }
+                        //if (GUILayout.Button("테이블 로드 테스트"))
+                        //{
+                        //    string _path = settingData.dataPath + '/' + scriptGenerator.dataTableName + ".bytes";
+                        //    _path = _path.Remove(0, _path.IndexOf("Assets"));
+                        //    DataContainer _table = DataContainer.LoadTable(AssetDatabase.LoadAssetAtPath<TextAsset>(_path));
+                        //}
                     }
                     break;
                 default:
@@ -626,8 +626,8 @@ namespace ExcelLoader
                 {
                     char[] _type = _headerData[1].ToLower().ToCharArray();
                     _type[0] = char.ToUpper(_type[0]);
-                    CellType _eType = CellType.None;
-                    if (Enum.TryParse(new string(_type), out _eType) == false)
+                    CellType _eType = (CellType)Enum.Parse(typeof(CellType), new string(_type));
+                    if (_eType == CellType.None)
                     {
                         UnityEngine.Debug.LogErrorFormat("ExcelLoader Error : 엑셀에 잘못된 타입 이름이 들어가있습니다. 테이블={0}, 시트={1}, 필드명={2}", _workBookName, _sheetName, _headerData[1]);
                         return null;
@@ -681,7 +681,6 @@ namespace ExcelLoader
         {
             return File.ReadAllText(excelLoaderPath + "Setting/ExcelLoaderNamespace.txt", Encoding.UTF8);
         }
-
         /// <summary>
         /// 경로에서 확장자 문자열을 얻는함수
         /// </summary>
@@ -793,7 +792,23 @@ namespace ExcelLoader
             }
             else if (_type == typeof(bool))
             {
-                _value = _cell.BooleanCellValue;
+                try
+                {
+                    _value = _cell.BooleanCellValue;
+                }
+                catch( Exception e)
+                {
+                    bool temp;
+                    if( Boolean.TryParse(_cell.StringCellValue, out temp) )
+                    {
+                        _value = temp;
+                    }
+                    else
+                    {
+                        throw e;
+                    }
+                }
+                
             }
             else if (_type.IsGenericType && _type.GetGenericTypeDefinition().Equals(typeof(Nullable<>)))
             {
@@ -850,10 +865,10 @@ namespace ExcelLoader
             Type _listType = typeof(List<>).MakeGenericType(_dataType);
             var _listInstance = Activator.CreateInstance(_listType);
             IList _list = (IList)_listInstance;
-                        
-            Dictionary<object, iTableDataBase> _checkKeyData = new Dictionary<object, iTableDataBase>();
+
             List<PropertyInfo> _dataPropertyInfo = _dataType.GetProperties().ToList();
             _dataPropertyInfo = _dataPropertyInfo.FindAll(_item => _headerData.Find(_header => _header.GetMemberName() == _item.Name) != null);
+            Dictionary<object, iTableDataBase> _checkKeyData = new Dictionary<object, iTableDataBase>();
             foreach (IRow _row in _sheet)
             {
                 if (_row.RowNum < 1)
@@ -887,7 +902,7 @@ namespace ExcelLoader
                         for (int _index_2 = 0; _index_2 < _listArrayColurm.Count; _index_2++)
                         {
                             ICell _arrayDataCell = _row.GetCell(_listArrayColurm[_index_2]);
-                            _arrayDatas.SetValue(ConvertFrom(_arrayDataCell, _elementType), _index_2);                            
+                            _arrayDatas.SetValue(ConvertFrom(_arrayDataCell, _elementType), _index_2);
                         }
                         _propertyDatas[_index] = _arrayDatas;
                     }
@@ -907,7 +922,8 @@ namespace ExcelLoader
                     EditorUtility.DisplayDialog("오류", string.Format("같은 키값이 존재합니다.\n테이블명={0}\n 중복 키값={1}", _sheet.SheetName, _data.GetKey()), "확인");
                     return false;
                 }
-            }            
+            }
+
             var _var = Activator.CreateInstance(_tableType, _list, _dataType);
             DataContainer _table = (DataContainer)_var;
             StreamWriter sWriter = new StreamWriter(_savepath + string.Format("/{0}.bytes", _filename));            

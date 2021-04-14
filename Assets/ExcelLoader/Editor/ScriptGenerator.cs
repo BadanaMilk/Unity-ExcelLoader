@@ -17,7 +17,7 @@ namespace ExcelLoader
              
         string dataTemplate;
         string nameSpaceText;
-        const string memberFieldTemplate = "[UnityEngine.SerializeField] private $MemberType$ $MemberName$;\n\tpublic $MemberType$ Data_$MemberName$ { get { return $MemberName$; } set { $MemberName$ = value; }}\n";
+        const string memberFieldTemplate = "[UnityEngine.SerializeField] private $MemberType$ $MemberName$;\n\tpublic $MemberType$ Data_$MemberName$ { get { return $MemberName$; } }\n";
         const string dataParamsTemplate = "$MemberType$ _$MemberName$";
         const string memberInitTemplate = "$MemberName$ = _$MemberName$;";
 
@@ -81,7 +81,7 @@ namespace ExcelLoader
 
         public Type GetDataType()
         {
-            return GetType("ExcelLoader." + dataFileName);
+            return GetType(dataFileName);
         }
 
         public Type GetTableType()
