@@ -498,6 +498,7 @@ namespace ExcelLoader
             EditorGUILayout.EndHorizontal();
         }
 
+        #region TreeView OnClick Event
         /// <summary>
         /// 단일 선택 엑셀 트리뷰 클릭 이벤트
         /// </summary>
@@ -541,6 +542,7 @@ namespace ExcelLoader
 
             scriptGenerator.SetScriptGenerator(selectSheet.SheetName, LoadNamespaceText(), settingData, listSelectSheetHeaders);
         }
+        #endregion TreeView OnClick Event
 
         /// <summary>
         /// 트리뷰아이템에서 엑셀 파일 경로와 시트이름을 얻는다.
@@ -1010,6 +1012,9 @@ namespace ExcelLoader
         }
     }
 
+    /// <summary>
+    /// 엑셀 테이블의 칼럼 데이터
+    /// </summary>
     public class HeaderData
     {
         public CellType type;
@@ -1018,6 +1023,10 @@ namespace ExcelLoader
         public int arrayGroup { get; private set; }
         List<int> listArrayDataColumnIndex;
 
+        /// <summary>
+        /// 칼럼의 변수 타입명
+        /// </summary>
+        /// <returns></returns>
         public string TypeName()
         {
             string _typeName;
@@ -1036,11 +1045,19 @@ namespace ExcelLoader
             return _typeName;
         }
 
+        /// <summary>
+        /// 칼럼 명
+        /// </summary>
+        /// <returns></returns>
         public string GetMemberName()
         {
             return "Data_" + name;
         }
 
+        /// <summary>
+        /// 그룹 아이디를 통한 배열 데이터
+        /// </summary>
+        /// <param name="_groupID"></param>
         public void SetArrayData(int _groupID)
         {
             arrayGroup = _groupID;
@@ -1060,11 +1077,19 @@ namespace ExcelLoader
             name = name.Substring(0, _removeNumberIndex) + 's';
         }
 
+        /// <summary>
+        /// 배열로 묶인 칼럼 인덱스 추가.
+        /// </summary>
+        /// <param name="_colurmIndex"></param>
         public void AddArrayData(int _colurmIndex)
         {
             listArrayDataColumnIndex.Add(_colurmIndex);
         }
 
+        /// <summary>
+        /// 배열로 묶인 칼럼 인덱스 리스트를 얻는다.
+        /// </summary>
+        /// <returns></returns>
         public List<int> GetArrayColurms() { return listArrayDataColumnIndex; }
     }
 }
