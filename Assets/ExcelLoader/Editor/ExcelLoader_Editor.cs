@@ -679,7 +679,13 @@ namespace ExcelLoader
         /// <returns></returns>
         string LoadNamespaceText()
         {
-            return File.ReadAllText(excelLoaderPath + "Setting/ExcelLoaderNamespace.txt", Encoding.UTF8);
+            string _filePath = excelLoaderPath + "Setting/ExcelLoaderNamespace.txt";
+            if (File.Exists(_filePath) == false)
+            {
+                var _file = File.CreateText(_filePath);
+                _file.Close();
+            }
+            return File.ReadAllText(_filePath, Encoding.UTF8);
         }
         /// <summary>
         /// 경로에서 확장자 문자열을 얻는함수
